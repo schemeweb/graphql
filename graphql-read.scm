@@ -73,14 +73,30 @@
     (cond ((match? token) (last-token #f) token)
           (else (last-token token) #f))))
 
+(define (equal char)
+  (lambda (x) (equal? char x)))
+
 (define (one-of-the-symbols? symbols)
   (lambda (x) (and (symbol? x) (member x symbols))))
+
+(define (read-selection-set)
+  (and (read-token? (equal #\{))
+       (let loop ((selections '()))
+         (if (read-token? (equal #\}))
+             selections
+             (let ((selection (or (read-token? symbol?)
+                                  (error "Selection expected"))))
+               (loop (append selections (list selection))))))))
 
 (define (read-operation?)
   (let ((operation-type
          (read-token? (one-of-the-symbols? '(query mutation subscription)))))
     (and operation-type
-         (list operation-type (read-token? symbol?)))))
+         (let* ((operation-name (or (read-token? symbol?)
+                                    (error "No operation name")))
+                (selection-set (read-selection-set)))
+           (append (list operation-type operation-name)
+                   selection-set)))))
 
 (define (graphql-read-document)
   (let loop ((document '()))
