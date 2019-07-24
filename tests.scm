@@ -25,8 +25,8 @@
            "}")))
 
 (define-test (read-simple)
-  (equal? (deb (string->graphql "foo bar -10 123 0 baz"))
-          '(foo bar -10 123 0 baz)))
+  (equal? (deb (string->graphql "query foo"))
+          '((query foo))))
 
 (compound-test (simple-tests)
   (hello-world)

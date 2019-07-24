@@ -1,6 +1,13 @@
+(define (deb x)
+  (write x)
+  (newline)
+  x)
+
 (define ascii-digit "0123456789")
 (define name-leader "_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 (define name-subseq (string-append name-leader ascii-digit))
+
+(define last-token (make-parameter #f))
 
 (define (graphql-string->symbol string)
   (string->symbol (string-map (lambda (ch) (if (char=? ch #\_) #\- ch))
@@ -51,7 +58,7 @@
                 (negative? (error "Minus sign not followed by number"))
                 (else #f))))))
 
-(define (graphql-read-token)
+(define (read-token-really)
   (skip-whitespace-and-comments)
   (if (eof-object? (peek-char))
       (eof-object)
@@ -61,13 +68,30 @@
           (read-name?)
           (error "Syntax error"))))
 
+(define (read-token? match?)
+  (let ((token (or (last-token) (read-token-really))))
+    (cond ((match? token) (last-token #f) token)
+          (else (last-token token) #f))))
+
+(define (one-of-the-symbols? symbols)
+  (lambda (x) (and (symbol? x) (member x symbols))))
+
+(define (read-operation?)
+  (let ((operation-type
+         (read-token? (one-of-the-symbols? '(query mutation subscription)))))
+    (and operation-type
+         (list operation-type (read-token? symbol?)))))
+
 (define (graphql-read-document)
-  (let loop ((tokens '()))
-    (let ((token (graphql-read-token)))
-      (if (eof-object? token)
-          tokens
-          (loop (append tokens (list token)))))))
+  (let loop ((document '()))
+    (if (read-token? eof-object?)
+        document
+        (loop
+         (append document
+                 (list (or (read-operation?)
+                           (error "Cannot parse GraphQL document"))))))))
 
 (define (string->graphql document-as-string)
-  (parameterize ((current-input-port (open-input-string document-as-string)))
+  (parameterize ((current-input-port (open-input-string document-as-string))
+                 (last-token #f))
     (graphql-read-document)))
