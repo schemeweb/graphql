@@ -1,0 +1,12 @@
+(import (r7rs))
+
+(define-library (graphql-read)
+  (export string->graphql)
+  (import (scheme base)
+          (scheme char)
+          (scheme file)
+          (scheme write)
+          (matchable)
+          (srfi 1)
+          (read-char-if))
+  (include "graphql-read.scm"))
