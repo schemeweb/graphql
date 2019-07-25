@@ -1,6 +1,6 @@
 (import (r7rs))
 
-(define-library (graphql-write)
+(define-library (net graphql write)
   (export graphql->string)
   (import (scheme base)
           (scheme char)

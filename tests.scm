@@ -2,8 +2,8 @@
 (import simple-tests)
 (import (srfi 1))
 
-(import (graphql-read))
-(import (graphql-write))
+(import (net graphql read))
+(import (net graphql write))
 
 (define (deb x)
   (write x)
