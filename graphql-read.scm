@@ -1,6 +1,8 @@
 (define (deb s x)
   (display "deb: ") (display s) (display " ") (write x) (newline) x)
 
+;;;; Lexer
+
 (define ascii-digit "0123456789")
 (define name-leader "_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 (define name-subseq (string-append name-leader ascii-digit))
@@ -124,6 +126,8 @@
           (make-result token (parse-results-next results))
           (make-expected-result (parse-results-position results) token)))))
 
+;;;; Parser
+
 (define parse-graphql-document
   (packrat-parser
 
@@ -131,6 +135,10 @@
 
      (define operation-type
        (one-of-the-symbols '(query mutation subscription)))
+
+     (define fragment-keyword (one-of-the-symbols '(fragment)))
+     (define on-keyword (one-of-the-symbols '(on)))
+     (define type-keyword (one-of-the-symbols '(type)))
 
      document)
 
@@ -145,7 +153,7 @@
    (definition
      ((a <- operation-definition) a)
      ((a <- fragment-definition) a)
-     ;;((a <- type-system-definition) a)
+     ((a <- type-system-definition) a)
      ;;((a <- type-system-extension) a)
      )
 
@@ -160,6 +168,72 @@
          `(,operation-type (,name ,@variables ,@directives) ,@selection-set)))
     ((selection-set <- selection-set)
      `(query #f ,@selection-set)))
+
+   (type-system-definition
+    ((a <- object-type-definition) a))
+
+   (object-type-definition
+    ((description <- string-value?
+                  type-keyword
+                  name <- 'name
+                  directives <- directive-list*
+                  fields <- fields-definition?)
+     `(type ,name ,description ,@fields)))
+
+   (fields-definition?
+    ((def <- fields-definition) def)
+    (() #f))
+
+   (fields-definition
+    (('|{| fields <- field-definition-list+ '|}|)
+     fields))
+
+   (field-definition-list*
+    ((list <- field-definition-list+) list)
+    (() '()))
+
+   (field-definition-list+
+    ((first <- field-definition rest <- field-definition-list*)
+     (cons first rest)))
+
+   (field-definition
+    ((description <- string-value?
+      name <- 'name
+      arguments <- arguments-definition?
+      '|:|
+      type <- type
+      directives <- directive-list*)
+     `(field ,name ,description ,arguments ,type ,directives)))
+
+   (arguments-definition?
+    ((a <- arguments-definition) a)
+    (() #f))
+
+   (arguments-definition
+    (('|(| list <- input-value-definition-list* '|)|)
+     list))
+
+   (input-value-definition-list*
+    ((list <- input-value-definition-list+) list)
+    (() '()))
+
+   (input-value-definition-list+
+    ((first <- input-value-definition rest <- input-value-definition-list*)
+     (cons first rest)))
+
+   (input-value-definition
+    ((description <- string-value?
+           name <- 'name
+           '|:|
+           type <- type
+           default <- value?
+           directives <- directive-list*)
+     `(input-value
+       ,name
+       ,description
+       ,type
+       ,default
+       ,@directives)))
 
    (variable-definitions?
     (('|(| list <- variable-definition-list+ '|)|) list)
@@ -194,15 +268,30 @@
     (('|[| ty <- type '|]|) `(list ,ty)))
 
    (fragment-definition
-    (('|fragment| fragment-name #|type-condition directives?|# selection-set)
-     `(fragment ,fragment-name ,selection-set)))
+    ((fragment-keyword
+      name <- fragment-name
+      type-cond <- type-condition
+      directives <- directive-list*
+      selection-set <- selection-set)
+     `(fragment
+       ,name
+       ,type-cond
+       ,directives
+       ,@selection-set)))
+
    (fragment-name
-    (('|on|) (error ""))
+    ((on-keyword) (error ""))
     ((name <- 'name) name))
 
-   #|
-   (type-system-definition)
+   (type-condition?
+    ((a <- type-condition) a)
+    (() #f))
 
+   (type-condition
+    ((on-keyword name <- 'name)
+     `(on ,name)))
+
+   #|
    (type-system-extension)
    |#
 
@@ -252,15 +341,19 @@
     (() #f))
    (value
     ((name <- variable-name) `($ ,name))
-    ((v <- 'integer) v)
-    ((v <- 'float) v)
     ((v <- 'string) v)
+    ((v <- 'nat) v)
+    ((v <- 'neg) v)
+    ((v <- 'float) v)
     ((v <- 'true) #t)
     ((v <- 'false) #f)
     ((v <- 'null) 'null)
-    ((v <- 'name) (cons 'enum v))
+    ((v <- 'name) (list 'enum v))
     ((v <- list-value) v)
     ((v <- object-value) v))
+   (string-value?
+    ((v <- 'string) v)
+    (() #f))
    (value-list*
     ((first <- value rest <- value-list*) (cons first rest))
     (()                                   '()))
@@ -274,6 +367,8 @@
    (name?
     ((name <- 'name) name)
     (() #f))))
+
+;;;; API
 
 (define (string->graphql document-as-string)
   (parameterize ((current-input-port (open-input-string document-as-string)))

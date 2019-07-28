@@ -34,6 +34,12 @@
           '((query (foo (@ deprecated (reason ($ foo))))
               (field abc a b c)
               def
+              ghi)))
+  (equal? (string->graphql
+           "query foo @deprecated(reason: 123) { abc { a b c } def ghi }")
+          '((query (foo (@ deprecated (reason 123)))
+              (field abc a b c)
+              def
               ghi))))
 
 (compound-test (simple-tests)
