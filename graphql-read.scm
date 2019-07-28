@@ -41,7 +41,8 @@
     (and leader
          (cons 'name
                (graphql-string->symbol
-                (string-append (string leader) (read-char* name-subseq)))))))
+                (string-append (string leader)
+                               (or (read-char* name-subseq) "")))))))
 
 (define (read-string-char)
   (cond ((or (read-char? eof-object?)
