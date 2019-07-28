@@ -1,13 +1,9 @@
-(define (deb x)
-  (write x)
-  (newline)
-  x)
+(define (deb s x)
+  (display "deb: ") (display s) (display " ") (write x) (newline) x)
 
 (define ascii-digit "0123456789")
 (define name-leader "_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 (define name-subseq (string-append name-leader ascii-digit))
-
-(define last-token (make-parameter #f))
 
 (define (graphql-string->symbol string)
   (string->symbol (string-map (lambda (ch) (if (char=? ch #\_) #\- ch))
@@ -19,11 +15,13 @@
     (else #f)))
 
 (define (read-punctuator?)
-  (cond ((read-char? punctuator-char?))
-        ((read-char? #\.)
-         (unless (and (read-char? #\.) (read-char? #\.))
-           (error "Saw dot, expected ellipsis")))
-        (else #f)))
+  (let ((punct (read-char? punctuator-char?)))
+    (cond (punct (cons (string->symbol (string punct)) #f))
+          ((read-char? #\.)
+           (if (and (read-char? #\.) (read-char? #\.))
+               '|...|
+               (error "Saw dot, expected ellipsis")))
+          (else #f))))
 
 (define (skip-comment)
   (unless (or (read-char? eof-object?)
@@ -41,8 +39,9 @@
 (define (read-name?)
   (let ((leader (read-char? name-leader)))
     (and leader
-         (graphql-string->symbol
-          (string-append (string leader) (read-char* name-subseq))))))
+         (cons 'name
+               (graphql-string->symbol
+                (string-append (string leader) (read-char* name-subseq)))))))
 
 (define (read-string-char)
   (cond ((or (read-char? eof-object?)
@@ -79,24 +78,28 @@
 
 (define (read-string?)
   (and (read-char? #\")
-       (if (read-char? #\")
-           (if (read-char? #\")
-               (read-triple-quoted-string)
-               "")
-           (read-double-quoted-string))))
+       (cons 'string
+             (if (read-char? #\")
+                 (if (read-char? #\")
+                     (read-triple-quoted-string)
+                     "")
+                 (read-double-quoted-string)))))
 
 (define (read-number?)
   (let ((negative? (not (not (read-char? #\-)))))
     (if (read-char? #\0)
         (if (read-char? ascii-digit)
             (error "GraphQL syntax does not permit leading zeros")
-            0)
+            (cons 'nat 0))
         (let ((digits (read-char* ascii-digit)))
-          (cond (digits (* (if negative? -1 1) (string->number digits)))
+          (cond ((and digits negative?)
+                 (cons 'neg (- (string->number digits))))
+                (digits
+                 (cons 'nat (string->number digits)))
                 (negative? (error "Minus sign not followed by number"))
                 (else #f))))))
 
-(define (read-token-really)
+(define (read-token)
   (skip-whitespace-and-comments)
   (if (eof-object? (peek-char))
       (eof-object)
@@ -106,46 +109,152 @@
           (read-name?)
           (error "Syntax error"))))
 
-(define (read-token? match?)
-  (let ((token (or (last-token) (read-token-really))))
-    (cond ((match? token) (last-token #f) token)
-          (else (last-token token) #f))))
+(define (token-generator)
+  (lambda ()
+    (let ((token (read-token)))
+      (if (eof-object? token)
+          (values #f #f)
+          (values #f token)))))
 
-(define (equal char)
-  (lambda (x) (equal? char x)))
+(define (one-of-the-symbols symbols)
+  (lambda (results)
+    (let ((token (parse-results-token-value results)))
+      (if (memv token symbols)
+          (make-result token (parse-results-next results))
+          (make-expected-result (parse-results-position results) token)))))
 
-(define (one-of-the-symbols? symbols)
-  (lambda (x) (and (symbol? x) (member x symbols))))
+(define parse-graphql-document
+  (packrat-parser
 
-(define (read-selection-set)
-  (and (read-token? (equal #\{))
-       (let loop ((selections '()))
-         (if (read-token? (equal #\}))
-             selections
-             (let ((selection (or (read-token? symbol?)
-                                  (error "Selection expected"))))
-               (loop (append selections (list selection))))))))
+   (begin
 
-(define (read-operation?)
-  (let ((operation-type
-         (read-token? (one-of-the-symbols? '(query mutation subscription)))))
-    (and operation-type
-         (let* ((operation-name (or (read-token? symbol?)
-                                    (error "No operation name")))
-                (selection-set (read-selection-set)))
-           (append (list operation-type operation-name)
-                   selection-set)))))
+     (define operation-type
+       (one-of-the-symbols '(query mutation subscription)))
 
-(define (graphql-read-document)
-  (let loop ((document '()))
-    (if (read-token? eof-object?)
-        document
-        (loop
-         (append document
-                 (list (or (read-operation?)
-                           (error "Cannot parse GraphQL document"))))))))
+     document)
+
+   (document
+    ((list <- definition-list*) list))
+
+   (definition-list*
+     ((list <- definition-list+) list)
+     (() '()))
+   (definition-list+
+     ((first <- definition rest <- definition-list*) (cons first rest)))
+   (definition
+     ((a <- operation-definition) a)
+     ((a <- fragment-definition) a)
+     ;;((a <- type-system-definition) a)
+     ;;((a <- type-system-extension) a)
+     )
+
+   (operation-definition
+    ((operation-type <- operation-type
+                     name <- name?
+                     ;;variables <- variable-definitions?
+                     ;;directives <- directives?
+                     selection-set <- selection-set)
+     `(,operation-type ,name ,@selection-set))
+    ((selection-set <- selection-set)
+     `(query #f ,@selection-set)))
+
+   (variable-definitions?
+    (('|(| list <- variable-definition-list+ '|)|) list)
+    (() '()))
+   (variable-definition-list*
+    ((list <- variable-definition-list+) list)
+    (() '()))
+   (variable-definition-list+
+    ((first <- variable-definition rest <- variable-definition-list*)
+     (cons first rest)))
+   (variable-definition
+    ((name <- variable-name '|:| type <- type default <- value?)
+     (list name type default)))
+   (type
+    ((ty <- non-null-type) ty)
+    ((ty <- list-type) ty)
+    ((ty <- 'name) ty))
+   (non-null-type
+    ((ty <- list-type '|!|) `(non-null ,ty))
+    ((ty <- 'name     '|!|) `(non-null ,ty)))
+   (list-type
+    (('|[| ty <- type '|]|) `(list ,ty)))
+
+   (fragment-definition
+    (('|fragment| fragment-name #|type-condition directives?|# selection-set)
+     `(fragment ,fragment-name ,selection-set)))
+   (fragment-name
+    (('|on|) (error ""))
+    ((name <- 'name) name))
+
+   #|
+   (type-system-definition)
+
+   (type-system-extension)
+   |#
+
+   (selection-set
+    (('|{| list <- selection-list+ '|}|) list))
+   (selection-list+
+    ((first <- selection rest <- selection-list*) (cons first rest)))
+   (selection-list*
+    ((list <- selection-list+) list)
+    (() '()))
+   (selection
+    ((a <- field) a)
+    ;;fragment-spread
+    ;;inline-fragment
+    )
+   (field
+    ((alias <- alias?  name <- 'name  arguments <- arguments)
+     (let ((x (if (null? arguments) name (list name arguments))))
+       (if alias `(alias ,alias ,x) x))))
+   (alias?
+    ((name <- 'name '|:|)  name)
+    (()                    #f))
+   (arguments
+    (('|(| args <- name-value-pair-list+ '|)|)  args)
+    (()                                         '()))
+   (name-value-pair-list+
+    ((first <- name-value-pair rest <- name-value-pair-list*)
+     (cons first rest)))
+   (name-value-pair-list*
+    ((list <- name-value-pair-list+)  list)
+    (()                               '()))
+   (name-value-pair
+    ((name <- 'name  '|:|  value <- value)  (cons name value)))
+   (value?
+    ((v <- value) v)
+    (() #f))
+   (value
+    ((name <- variable-name) `(variable ,name))
+    ((v <- 'integer) v)
+    ((v <- 'float) v)
+    ((v <- 'string) v)
+    ((v <- 'true) #t)
+    ((v <- 'false) #f)
+    ((v <- 'null) 'null)
+    ((v <- 'name) (cons 'enum v))
+    ((v <- list-value) v)
+    ((v <- object-value) v))
+   (value-list*
+    ((first <- value rest <- value-list*) (cons first rest))
+    (()                                   '()))
+   (list-value
+    (('|[| v <- value-list* '|]|) (list->vector v)))
+   (object-value
+    (('|{| pairs <- name-value-pair-list* '|}|) (cons 'object pairs)))
+   (variable-name
+    (('|$| name <- 'name) name))
+
+   (name?
+    ((name <- 'name) name)
+    (() #f))))
 
 (define (string->graphql document-as-string)
-  (parameterize ((current-input-port (open-input-string document-as-string))
-                 (last-token #f))
-    (graphql-read-document)))
+  (parameterize ((current-input-port (open-input-string document-as-string)))
+    (let ((result (parse-graphql-document
+                   (base-generator->results (token-generator)))))
+      (if (parse-result-successful? result)
+          (parse-result-semantic-value result)
+          (error "generate")))))

@@ -5,10 +5,8 @@
 (import (net graphql read))
 (import (net graphql write))
 
-(define (deb x)
-  (write x)
-  (newline)
-  x)
+(define (deb s x)
+  (display "deb: ") (display s) (display " ") (write x) (newline) x)
 
 (define (lines . lines_)
   (fold (lambda (line so-far) (string-append so-far line "\n"))
@@ -25,7 +23,11 @@
            "}")))
 
 (define-test (read-simple)
-  (equal? (deb (string->graphql "query foo { abc def ghi }"))
+  (equal? (string->graphql "{ abc def ghi }")
+          '((query #f abc def ghi)))
+  (equal? (string->graphql "query { abc def ghi }")
+          '((query #f abc def ghi)))
+  (equal? (string->graphql "query foo { abc def ghi }")
           '((query foo abc def ghi))))
 
 (compound-test (simple-tests)

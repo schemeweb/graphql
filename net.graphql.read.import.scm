@@ -8,5 +8,6 @@
           (scheme write)
           (matchable)
           (srfi 1)
-          (read-char-if))
+          (read-char-if)
+          (packrat))
   (include "graphql-read.scm"))
