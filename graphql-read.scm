@@ -194,6 +194,9 @@
    (type-system-extension)
    |#
 
+   (selection-set?
+    ((selection-set <- selection-set) selection-set)
+    (() '()))
    (selection-set
     (('|{| list <- selection-list+ '|}|) list))
    (selection-list+
@@ -207,8 +210,16 @@
     ;;inline-fragment
     )
    (field
-    ((alias <- alias?  name <- 'name  arguments <- arguments)
-     (let ((x (if (null? arguments) name (list name arguments))))
+    ((alias <- alias?
+            name <- 'name
+            arguments <- arguments
+            selection-set <- selection-set?)
+     (let ((x (cond ((and (null? arguments) (null? selection-set))
+                     name)
+                    ((null? arguments)
+                     `(field ,name ,@selection-set))
+                    (else
+                     `(field (,name ,@arguments) ,@selection-set)))))
        (if alias `(alias ,alias ,x) x))))
    (alias?
     ((name <- 'name '|:|)  name)

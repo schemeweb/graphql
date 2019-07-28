@@ -28,7 +28,9 @@
   (equal? (string->graphql "query { abc def ghi }")
           '((query #f abc def ghi)))
   (equal? (string->graphql "query foo { abc def ghi }")
-          '((query foo abc def ghi))))
+          '((query foo abc def ghi)))
+  (equal? (string->graphql "query foo { abc { a b c } def ghi }")
+          '((query foo (field abc a b c) def ghi))))
 
 (compound-test (simple-tests)
   (hello-world)
