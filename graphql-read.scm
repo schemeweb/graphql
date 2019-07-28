@@ -155,6 +155,7 @@
      (define fragment-keyword (one-of-the-symbols '(fragment)))
      (define on-keyword (one-of-the-symbols '(on)))
      (define type-keyword (one-of-the-symbols '(type)))
+     (define implements-keyword (one-of-the-symbols '(implements)))
 
      document)
 
@@ -192,9 +193,25 @@
     ((description <- string-value?
                   type-keyword
                   name <- 'name
+                  implements <- implements-interfaces?
                   directives <- directive-list*
                   fields <- fields-definition?)
-     `(type ,name ,description ,@fields)))
+     `(type (,name (implements ,@implements))
+            ,description
+            ,@fields)))
+
+   (implements-interfaces?
+    ((implements-keyword '|&| list <- implements-interfaces-list+) list)
+    ((implements-keyword      list <- implements-interfaces-list+) list)
+    (() '()))
+
+   (implements-interfaces-list+
+    ((first <- 'name rest <- implements-interfaces-list-cont)
+     (cons first rest)))
+
+   (implements-interfaces-list-cont
+    (('|&| list <- implements-interfaces-list+) list)
+    (() '()))
 
    (fields-definition?
     ((def <- fields-definition) def)
