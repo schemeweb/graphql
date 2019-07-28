@@ -14,6 +14,7 @@
 (define (punctuator-char? c)
   (case c
     ((#\! #\$ #\( #\) #\: #\= #\@ #\[ #\] #\{ #\| #\}) #t)
+    ((#\&) #t)  ;; TODO: not classified as a punctuator in the spec
     (else #f)))
 
 (define (read-punctuator?)
@@ -35,7 +36,12 @@
   (cond ((read-char? #\#)
          (skip-comment)
          (skip-whitespace-and-comments))
-        ((or (read-char? #\space) (read-char? #\tab))
+        ((read-char? #\,)
+         (skip-whitespace-and-comments))
+        ((or (read-char? #\space)
+             (read-char? #\tab)
+             (read-char? #\newline)
+             (read-char? #\return))
          (skip-whitespace-and-comments))))
 
 (define (read-name?)
@@ -46,10 +52,12 @@
                 (string-append (string leader)
                                (or (read-char* name-subseq) "")))))))
 
-(define (read-string-char)
-  (cond ((or (read-char? eof-object?)
-             (read-char? #\newline)
-             (read-char? #\return))
+(define (read-string-char allow-newline?)
+  (cond ((read-char? eof-object?)
+         (error "End of stream inside quoted string"))
+        ((and (not allow-newline?)
+              (or (read-char? #\newline)
+                  (read-char? #\return)))
          (error "Newline inside quoted string"))
         ((read-char? #\\)
          (or (and (read-char #\u)
@@ -67,7 +75,7 @@
   (let loop ((chars '()))
     (if (read-char? #\")
         (list->string chars)
-        (loop (append chars (list (read-string-char)))))))
+        (loop (append chars (list (read-string-char #f)))))))
 
 (define (read-triple-quoted-string)
   (let loop ((chars '()))
@@ -77,7 +85,7 @@
                 (list->string chars)
                 (loop (append chars '(#\" #\"))))
             (loop (append chars '(#\"))))
-        (loop (append chars (list (read-string-char)))))))
+        (loop (append chars (list (read-string-char #t)))))))
 
 (define (read-string?)
   (and (read-char? #\")
@@ -110,7 +118,8 @@
           (read-string?)
           (read-number?)
           (read-name?)
-          (error "Syntax error"))))
+          (error (string-append "Syntax error: "
+                                (number->string (char->integer (peek-char))))))))
 
 (define (token-generator)
   (lambda ()
@@ -118,6 +127,13 @@
       (if (eof-object? token)
           (values #f #f)
           (values #f token)))))
+
+(define (read-graphql-tokens)
+  (let loop ((tokens '()))
+    (let ((token (read-token)))
+      (if (eof-object? token)
+          tokens
+          (loop (append tokens (list token)))))))
 
 (define (one-of-the-symbols symbols)
   (lambda (results)
@@ -370,10 +386,13 @@
 
 ;;;; API
 
+(define (read-graphql)
+  (let ((result (parse-graphql-document
+                 (base-generator->results (token-generator)))))
+    (if (parse-result-successful? result)
+        (parse-result-semantic-value result)
+        (error "generate"))))
+
 (define (string->graphql document-as-string)
   (parameterize ((current-input-port (open-input-string document-as-string)))
-    (let ((result (parse-graphql-document
-                   (base-generator->results (token-generator)))))
-      (if (parse-result-successful? result)
-          (parse-result-semantic-value result)
-          (error "generate")))))
+    (read-graphql)))
