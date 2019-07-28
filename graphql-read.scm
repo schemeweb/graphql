@@ -152,10 +152,12 @@
    (operation-definition
     ((operation-type <- operation-type
                      name <- name?
-                     ;;variables <- variable-definitions?
-                     ;;directives <- directives?
+                     variables <- variable-definitions?
+                     directives <- directive-list*
                      selection-set <- selection-set)
-     `(,operation-type ,name ,@selection-set))
+     (if (and (null? variables) (null? directives))
+         `(,operation-type ,name ,@selection-set)
+         `(,operation-type (,name ,@variables ,@directives) ,@selection-set)))
     ((selection-set <- selection-set)
      `(query #f ,@selection-set)))
 
@@ -171,6 +173,16 @@
    (variable-definition
     ((name <- variable-name '|:| type <- type default <- value?)
      (list name type default)))
+
+   (directive-list+
+    ((first <- directive rest <- directive-list*) (cons first rest)))
+   (directive-list*
+    ((list <- directive-list+) list)
+    (() '()))
+   (directive
+    (('|@| name <- 'name arguments <- arguments?)
+     `(@ ,name ,@arguments)))
+
    (type
     ((ty <- non-null-type) ty)
     ((ty <- list-type) ty)
@@ -212,7 +224,7 @@
    (field
     ((alias <- alias?
             name <- 'name
-            arguments <- arguments
+            arguments <- arguments?
             selection-set <- selection-set?)
      (let ((x (cond ((and (null? arguments) (null? selection-set))
                      name)
@@ -224,7 +236,7 @@
    (alias?
     ((name <- 'name '|:|)  name)
     (()                    #f))
-   (arguments
+   (arguments?
     (('|(| args <- name-value-pair-list+ '|)|)  args)
     (()                                         '()))
    (name-value-pair-list+
@@ -234,12 +246,12 @@
     ((list <- name-value-pair-list+)  list)
     (()                               '()))
    (name-value-pair
-    ((name <- 'name  '|:|  value <- value)  (cons name value)))
+    ((name <- 'name  '|:|  value <- value)  (list name value)))
    (value?
     ((v <- value) v)
     (() #f))
    (value
-    ((name <- variable-name) `(variable ,name))
+    ((name <- variable-name) `($ ,name))
     ((v <- 'integer) v)
     ((v <- 'float) v)
     ((v <- 'string) v)
