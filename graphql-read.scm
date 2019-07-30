@@ -155,6 +155,7 @@
      (define fragment-keyword (one-of-the-symbols '(fragment)))
      (define directive-keyword (one-of-the-symbols '(directive)))
      (define on-keyword (one-of-the-symbols '(on)))
+     (define input-keyword (one-of-the-symbols '(input)))
      (define type-keyword (one-of-the-symbols '(type)))
      (define implements-keyword (one-of-the-symbols '(implements)))
 
@@ -195,6 +196,7 @@
    (definition
      ((a <- operation-definition) a)
      ((a <- fragment-definition) a)
+     ((a <- input-object-type-definition) a)
      ((a <- object-type-definition) a)
      ((a <- directive-definition) a))
 
@@ -209,6 +211,14 @@
          `(,operation-type (,name ,@variables ,@directives) ,@selection-set)))
     ((selection-set <- selection-set)
      `(query #f ,@selection-set)))
+
+   (input-object-type-definition
+    ((description <- string-value?
+                  input-keyword
+                  name <- 'name
+                  directives <- directive-list*
+                  field <- input-fields-definition?)
+     `(input ,name ,description ,directives ,field)))
 
    (object-type-definition
     ((description <- string-value?
@@ -280,6 +290,10 @@
    (arguments-definition
     (('|(| list <- input-value-definition-list* '|)|)
      list))
+
+   (input-fields-definition?
+    (('|{| list <- input-value-definition-list+ '|}|) list)
+    (() '()))
 
    (input-value-definition-list*
     ((list <- input-value-definition-list+) list)
