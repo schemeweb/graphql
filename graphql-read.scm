@@ -461,7 +461,8 @@
                  (base-generator->results (token-generator)))))
     (if (parse-result-successful? result)
         (parse-result-semantic-value result)
-        (error "generate"))))
+        (error (parse-error-expected
+                (parse-result-error result))))))
 
 (define (string->graphql document-as-string)
   (parameterize ((current-input-port (open-input-string document-as-string)))
