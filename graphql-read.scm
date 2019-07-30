@@ -153,14 +153,39 @@
        (one-of-the-symbols '(query mutation subscription)))
 
      (define fragment-keyword (one-of-the-symbols '(fragment)))
+     (define directive-keyword (one-of-the-symbols '(directive)))
      (define on-keyword (one-of-the-symbols '(on)))
      (define type-keyword (one-of-the-symbols '(type)))
      (define implements-keyword (one-of-the-symbols '(implements)))
 
+     (define executable-directive-location
+       (one-of-the-symbols
+        '(QUERY
+          MUTATION
+          SUBSCRIPTION
+          FIELD
+          FRAGMENT-DEFINITION
+          FRAGMENT-SPREAD
+          INLINE-FRAGMENT)))
+
+     (define type-system-directive-location
+       (one-of-the-symbols
+        '(SCHEMA
+          SCALAR
+          OBJECT
+          FIELD-DEFINITION
+          ARGUMENT-DEFINITION
+          INTERFACE
+          UNION
+          ENUM
+          ENUM-VALUE
+          INPUT-OBJECT
+          INPUT-FIELD-DEFINITION)))
+
      document)
 
    (document
-    ((list <- definition-list*) list))
+    ((list <- definition-list+) list))
 
    (definition-list*
      ((list <- definition-list+) list)
@@ -170,9 +195,8 @@
    (definition
      ((a <- operation-definition) a)
      ((a <- fragment-definition) a)
-     ((a <- type-system-definition) a)
-     ;;((a <- type-system-extension) a)
-     )
+     ((a <- object-type-definition) a)
+     ((a <- directive-definition) a))
 
    (operation-definition
     ((operation-type <- operation-type
@@ -185,9 +209,6 @@
          `(,operation-type (,name ,@variables ,@directives) ,@selection-set)))
     ((selection-set <- selection-set)
      `(query #f ,@selection-set)))
-
-   (type-system-definition
-    ((a <- object-type-definition) a))
 
    (object-type-definition
     ((description <- string-value?
@@ -213,6 +234,20 @@
     (('|&| list <- implements-interfaces-list+) list)
     (() '()))
 
+   (directive-locations
+    (('|\|| list <- directive-location-list+) list)
+    ((list <- directive-location-list+) list))
+
+   (directive-location-list+
+    ((first <- directive-location '|\|| rest <- directive-location-list+)
+     (cons first rest))
+    ((first <- directive-location)
+     (list first)))
+
+   (directive-location
+    ((a <- executable-directive-location) a)
+    ((a <- type-system-directive-location) a))
+
    (fields-definition?
     ((def <- fields-definition) def)
     (() #f))
@@ -231,11 +266,11 @@
 
    (field-definition
     ((description <- string-value?
-      name <- 'name
-      arguments <- arguments-definition?
-      '|:|
-      type <- type
-      directives <- directive-list*)
+                  name <- 'name
+                  arguments <- arguments-definition?
+                  '|:|
+                  type <- type
+                  directives <- directive-list*)
      `(field ,name ,description ,arguments ,type ,directives)))
 
    (arguments-definition?
@@ -256,17 +291,21 @@
 
    (input-value-definition
     ((description <- string-value?
-           name <- 'name
-           '|:|
-           type <- type
-           default <- value?
-           directives <- directive-list*)
+                  name <- 'name
+                  '|:|
+                  type <- type
+                  default <- default-value?
+                  directives <- directive-list*)
      `(input-value
        ,name
        ,description
        ,type
        ,default
        ,@directives)))
+
+   (default-value?
+     (('|=| value <- value) `(default ,value))
+     (() #f))
 
    (variable-definitions?
     (('|(| list <- variable-definition-list+ '|)|) list)
@@ -315,6 +354,20 @@
    (fragment-name
     ((on-keyword) (error ""))
     ((name <- 'name) name))
+
+   (directive-definition
+    ((description <- string-value?
+                  directive-keyword
+                  '|@| name <- 'name
+                  arguments <- arguments-definition?
+                  on-keyword
+                  directive-locations <- directive-locations)
+     `(directive
+       ,name
+       ,description
+       ,arguments
+       ,directive-locations
+       )))
 
    (type-condition?
     ((a <- type-condition) a)
