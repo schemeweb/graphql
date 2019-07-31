@@ -135,7 +135,7 @@
           tokens
           (loop (append tokens (list token)))))))
 
-(define (one-of-the-symbols symbols)
+(define (one-of-the-tokens symbols)
   (lambda (results)
     (let ((token (parse-results-token-value results)))
       (if (memv token symbols)
@@ -147,33 +147,33 @@
 (define parse-graphql-document
 
   (let ((eof
-         (one-of-the-symbols '(#f)))
+         (one-of-the-tokens '(#f)))
         (empty
          (lambda (results) (make-result #f results)))
         (operation-type
-         (one-of-the-symbols '(query mutation subscription)))
+         (one-of-the-tokens '(query mutation subscription)))
         (fragment-keyword
-         (one-of-the-symbols '(fragment)))
+         (one-of-the-tokens '(fragment)))
         (directive-keyword
-         (one-of-the-symbols '(directive)))
+         (one-of-the-tokens '(directive)))
         (on-keyword
-         (one-of-the-symbols '(on)))
+         (one-of-the-tokens '(on)))
         (input-keyword
-         (one-of-the-symbols '(input)))
+         (one-of-the-tokens '(input)))
         (union-keyword
-         (one-of-the-symbols '(union)))
+         (one-of-the-tokens '(union)))
         (enum-keyword
-         (one-of-the-symbols '(enum)))
+         (one-of-the-tokens '(enum)))
         (scalar-keyword
-         (one-of-the-symbols '(scalar)))
+         (one-of-the-tokens '(scalar)))
         (type-keyword
-         (one-of-the-symbols '(type)))
+         (one-of-the-tokens '(type)))
         (implements-keyword
-         (one-of-the-symbols '(implements)))
+         (one-of-the-tokens '(implements)))
         (interface-keyword
-         (one-of-the-symbols '(interface)))
+         (one-of-the-tokens '(interface)))
         (executable-directive-location
-         (one-of-the-symbols
+         (one-of-the-tokens
           '(QUERY
             MUTATION
             SUBSCRIPTION
@@ -182,7 +182,7 @@
             FRAGMENT-SPREAD
             INLINE-FRAGMENT)))
         (type-system-directive-location
-         (one-of-the-symbols
+         (one-of-the-tokens
           '(SCHEMA
             SCALAR
             OBJECT
