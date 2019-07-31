@@ -158,6 +158,7 @@
      (define input-keyword (one-of-the-symbols '(input)))
      (define union-keyword (one-of-the-symbols '(union)))
      (define enum-keyword (one-of-the-symbols '(enum)))
+     (define scalar-keyword (one-of-the-symbols '(scalar)))
      (define type-keyword (one-of-the-symbols '(type)))
      (define implements-keyword (one-of-the-symbols '(implements)))
      (define interface-keyword (one-of-the-symbols '(interface)))
@@ -203,6 +204,7 @@
      ((a <- input-object-type-definition) a)
      ((a <- union-type-definition) a)
      ((a <- enum-type-definition) a)
+     ((a <- scalar-type-definition) a)
      ((a <- object-type-definition) a)
      ((a <- directive-definition) a))
 
@@ -249,6 +251,13 @@
                   directives <- directive-list*
                   values <- enum-values-definition?)
      `(enum ,name ,description ,directives ,values)))
+
+   (scalar-type-definition
+    ((description <- string-value?
+                  scalar-keyword
+                  name <- 'name
+                  directives <- directive-list*)
+     `(scalar ,name ,description ,directives)))
 
    (object-type-definition
     ((description <- string-value?
