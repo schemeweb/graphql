@@ -60,8 +60,8 @@
                   (read-char? #\return)))
          (error "Newline inside quoted string"))
         ((read-char? #\\)
-         (or (and (read-char #\u)
-                  (let ((char (read-char "bfnrt\"\\/")))
+         (or (and (read-char? #\u)
+                  (let ((char (read-char? "bfnrt\"\\/")))
                     (case char
                       ((#\b) #\x08)
                       ((#\f) #\x0c)
