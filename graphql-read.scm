@@ -142,36 +142,30 @@
           (make-result token (parse-results-next results))
           (make-expected-result (parse-results-position results) token)))))
 
+(define (the-token goal)
+  (lambda (results)
+    (let ((token (parse-results-token-value results)))
+      (if (eqv? goal token)
+          (make-result token (parse-results-next results))
+          (make-expected-result (parse-results-position results) token)))))
+
 ;;;; Parser
 
 (define parse-graphql-document
 
-  (let ((eof
-         (one-of-the-tokens '(#f)))
-        (empty
-         (lambda (results) (make-result #f results)))
-        (operation-type
-         (one-of-the-tokens '(query mutation subscription)))
-        (fragment-keyword
-         (one-of-the-tokens '(fragment)))
-        (directive-keyword
-         (one-of-the-tokens '(directive)))
-        (on-keyword
-         (one-of-the-tokens '(on)))
-        (input-keyword
-         (one-of-the-tokens '(input)))
-        (union-keyword
-         (one-of-the-tokens '(union)))
-        (enum-keyword
-         (one-of-the-tokens '(enum)))
-        (scalar-keyword
-         (one-of-the-tokens '(scalar)))
-        (type-keyword
-         (one-of-the-tokens '(type)))
-        (implements-keyword
-         (one-of-the-tokens '(implements)))
-        (interface-keyword
-         (one-of-the-tokens '(interface)))
+  (let ((empty (lambda (results) (make-result #f results)))
+        (eof (the-token #f))
+        (operation-type (one-of-the-tokens '(query mutation subscription)))
+        (fragment-keyword (the-token 'fragment))
+        (directive-keyword (the-token 'directive))
+        (on-keyword (the-token 'on))
+        (input-keyword (the-token 'input))
+        (union-keyword (the-token 'union))
+        (enum-keyword (the-token 'enum))
+        (scalar-keyword (the-token 'scalar))
+        (type-keyword (the-token 'type))
+        (implements-keyword (the-token 'implements))
+        (interface-keyword (the-token 'interface))
         (executable-directive-location
          (one-of-the-tokens
           '(QUERY
