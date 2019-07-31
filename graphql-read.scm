@@ -156,6 +156,7 @@
      (define directive-keyword (one-of-the-symbols '(directive)))
      (define on-keyword (one-of-the-symbols '(on)))
      (define input-keyword (one-of-the-symbols '(input)))
+     (define union-keyword (one-of-the-symbols '(union)))
      (define type-keyword (one-of-the-symbols '(type)))
      (define implements-keyword (one-of-the-symbols '(implements)))
      (define interface-keyword (one-of-the-symbols '(interface)))
@@ -199,6 +200,7 @@
      ((a <- fragment-definition) a)
      ((a <- interface-type-definition) a)
      ((a <- input-object-type-definition) a)
+     ((a <- union-type-definition) a)
      ((a <- object-type-definition) a)
      ((a <- directive-definition) a))
 
@@ -229,6 +231,14 @@
                   directives <- directive-list*
                   field <- input-fields-definition?)
      `(input ,name ,description ,directives ,field)))
+
+   (union-type-definition
+    ((description <- string-value?
+                  union-keyword
+                  name <- 'name
+                  directives <- directive-list*
+                  types <- union-member-types?)
+     `(union ,name ,description ,directives ,types)))
 
    (object-type-definition
     ((description <- string-value?
@@ -267,6 +277,17 @@
    (directive-location
     ((a <- executable-directive-location) a)
     ((a <- type-system-directive-location) a))
+
+   (union-member-types?
+    (('|=| '|\|| list <- union-member-type-list+) list)
+    (('|=| list <- union-member-type-list+) list)
+    (() '()))
+
+   (union-member-type-list+
+    ((first <- 'name '|\|| rest <- union-member-type-list+)
+     (cons first rest))
+    ((first <- 'name)
+     (list first)))
 
    (fields-definition?
     ((def <- fields-definition) def)
