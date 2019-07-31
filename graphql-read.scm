@@ -193,10 +193,10 @@
      document
 
    (document
-    ((list <- definition-list+) list))
+    ((lst <- definition-list+) lst))
 
    (definition-list*
-     ((list <- definition-list+) list)
+     ((lst <- definition-list+) lst)
      ((eof) '()))
    (definition-list+
      ((first <- definition rest <- definition-list*) (cons first rest)))
@@ -274,21 +274,21 @@
             ,@fields)))
 
    (implements-interfaces?
-    ((implements-keyword '|&| list <- implements-interfaces-list+) list)
-    ((implements-keyword      list <- implements-interfaces-list+) list)
-    ((empty) '()))
+    ((implements-keyword '|&| lst <- implements-interfaces-list+) lst)
+    ((implements-keyword      lst <- implements-interfaces-list+) lst)
+    ((_ <- empty) '()))
 
    (implements-interfaces-list+
     ((first <- 'name rest <- implements-interfaces-list-cont)
      (cons first rest)))
 
    (implements-interfaces-list-cont
-    (('|&| list <- implements-interfaces-list+) list)
-    ((empty) '()))
+    ((_ <- '|&| lst <- implements-interfaces-list+) lst)
+    ((_ <- empty) '()))
 
    (directive-locations
-    (('|\|| list <- directive-location-list+) list)
-    ((list <- directive-location-list+) list))
+    ((_ <- '|\|| lst <- directive-location-list+) lst)
+    ((lst <- directive-location-list+) lst))
 
    (directive-location-list+
     ((first <- directive-location '|\|| rest <- directive-location-list+)
@@ -301,9 +301,9 @@
     ((a <- type-system-directive-location) a))
 
    (union-member-types?
-    (('|=| '|\|| list <- union-member-type-list+) list)
-    (('|=| list <- union-member-type-list+) list)
-    ((empty) '()))
+    ((_ <- '|=| '|\|| lst <- union-member-type-list+) lst)
+    ((_ <- '|=| lst <- union-member-type-list+) lst)
+    ((_ <- empty) '()))
 
    (union-member-type-list+
     ((first <- 'name '|\|| rest <- union-member-type-list+)
@@ -312,13 +312,13 @@
      (list first)))
 
    (enum-values-definition?
-    (('|{| list <- enum-value-definition-list* '|}|) list)
-    ((empty) '()))
+    ((_ <- '|{| lst <- enum-value-definition-list* '|}|) lst)
+    ((_ <- empty) '()))
 
    (enum-value-definition-list*
     ((first <- enum-value-definition rest <- enum-value-definition-list*)
      (cons first rest))
-    ((empty) '()))
+    ((_ <- empty) '()))
 
    (enum-value-definition
     ((description <- string-value?
@@ -331,15 +331,15 @@
 
    (fields-definition?
     ((def <- fields-definition) def)
-    ((empty) #f))
+    ((_ <- empty) #f))
 
    (fields-definition
-    (('|{| fields <- field-definition-list+ '|}|)
+    ((_ <- '|{| fields <- field-definition-list+ '|}|)
      fields))
 
    (field-definition-list*
-    ((list <- field-definition-list+) list)
-    ((empty) '()))
+    ((lst <- field-definition-list+) lst)
+    ((_ <- empty) '()))
 
    (field-definition-list+
     ((first <- field-definition rest <- field-definition-list*)
@@ -356,19 +356,19 @@
 
    (arguments-definition?
     ((a <- arguments-definition) a)
-    ((empty) #f))
+    ((_ <- empty) #f))
 
    (arguments-definition
-    (('|(| list <- input-value-definition-list* '|)|)
-     list))
+    ((_ <- '|(| lst <- input-value-definition-list* '|)|)
+     lst))
 
    (input-fields-definition?
-    (('|{| list <- input-value-definition-list+ '|}|) list)
-    ((empty) '()))
+    ((_ <- '|{| lst <- input-value-definition-list+ '|}|) lst)
+    ((_ <- empty) '()))
 
    (input-value-definition-list*
-    ((list <- input-value-definition-list+) list)
-    ((empty) '()))
+    ((lst <- input-value-definition-list+) lst)
+    ((_ <- empty) '()))
 
    (input-value-definition-list+
     ((first <- input-value-definition rest <- input-value-definition-list*)
@@ -389,15 +389,15 @@
        ,@directives)))
 
    (default-value?
-     (('|=| value <- value) `(default ,value))
-     ((empty) #f))
+     ((_ <- '|=| value <- value) `(default ,value))
+     ((_ <- empty) #f))
 
    (variable-definitions?
-    (('|(| list <- variable-definition-list+ '|)|) list)
-    ((empty) '()))
+    ((_ <- '|(| lst <- variable-definition-list+ '|)|) lst)
+    ((_ <- empty) '()))
    (variable-definition-list*
-    ((list <- variable-definition-list+) list)
-    ((empty) '()))
+    ((lst <- variable-definition-list+) lst)
+    ((_ <- empty) '()))
    (variable-definition-list+
     ((first <- variable-definition rest <- variable-definition-list*)
      (cons first rest)))
@@ -408,10 +408,10 @@
    (directive-list+
     ((first <- directive rest <- directive-list*) (cons first rest)))
    (directive-list*
-    ((list <- directive-list+) list)
-    ((empty) '()))
+    ((lst <- directive-list+) lst)
+    ((_ <- empty) '()))
    (directive
-    (('|@| name <- 'name arguments <- arguments?)
+    ((_ <- '|@| name <- 'name arguments <- arguments?)
      `(@ ,name ,@arguments)))
 
    (type
@@ -422,7 +422,7 @@
     ((ty <- list-type '|!|) `(non-null ,ty))
     ((ty <- 'name     '|!|) `(non-null ,ty)))
    (list-type
-    (('|[| ty <- type '|]|) `(list ,ty)))
+    ((_ <- '|[| ty <- type '|]|) `(list ,ty)))
 
    (fragment-definition
     ((fragment-keyword
@@ -456,7 +456,7 @@
 
    (type-condition?
     ((a <- type-condition) a)
-    ((empty) #f))
+    ((_ <- empty) #f))
 
    (type-condition
     ((on-keyword name <- 'name)
@@ -468,14 +468,14 @@
 
    (selection-set?
     ((selection-set <- selection-set) selection-set)
-    ((empty) '()))
+    ((_ <- empty) '()))
    (selection-set
-    (('|{| list <- selection-list+ '|}|) list))
+    ((_ <- '|{| lst <- selection-list+ '|}|) lst))
    (selection-list+
     ((first <- selection rest <- selection-list*) (cons first rest)))
    (selection-list*
-    ((list <- selection-list+) list)
-    ((empty) '()))
+    ((lst <- selection-list+) lst)
+    ((_ <- empty) '()))
    (selection
     ((a <- field) a)
     ;;fragment-spread
@@ -495,21 +495,21 @@
        (if alias `(alias ,alias ,x) x))))
    (alias?
     ((name <- 'name '|:|)  name)
-    ((empty) #f))
+    ((_ <- empty) #f))
    (arguments?
-    (('|(| args <- name-value-pair-list+ '|)|)  args)
-    ((empty) '()))
+    ((_ <- '|(| args <- name-value-pair-list+ '|)|)  args)
+    ((_ <- empty) '()))
    (name-value-pair-list+
     ((first <- name-value-pair rest <- name-value-pair-list*)
      (cons first rest)))
    (name-value-pair-list*
-    ((list <- name-value-pair-list+)  list)
-    ((empty) '()))
+    ((lst <- name-value-pair-list+) lst)
+    ((_ <- empty) '()))
    (name-value-pair
     ((name <- 'name  '|:|  value <- value)  (list name value)))
    (value?
     ((v <- value) v)
-    ((empty) #f))
+    ((_ <- empty) #f))
    (value
     ((name <- variable-name) `($ ,name))
     ((v <- 'string) v)
@@ -524,20 +524,20 @@
     ((v <- object-value) v))
    (string-value?
     ((v <- 'string) v)
-    ((empty) #f))
+    ((_ <- empty) #f))
    (value-list*
     ((first <- value rest <- value-list*) (cons first rest))
-    ((empty) '()))
+    ((_ <- empty) '()))
    (list-value
-    (('|[| v <- value-list* '|]|) (list->vector v)))
+    ((_ <- '|[| v <- value-list* '|]|) (list->vector v)))
    (object-value
-    (('|{| pairs <- name-value-pair-list* '|}|) (cons 'object pairs)))
+    ((_ <- '|{| pairs <- name-value-pair-list* '|}|) (cons 'object pairs)))
    (variable-name
-    (('|$| name <- 'name) name))
+    ((_ <- '|$| name <- 'name) name))
 
    (name?
     ((name <- 'name) name)
-    ((empty) #f)))))
+    ((_ <- empty) #f)))))
 
 ;;;; API
 
