@@ -157,6 +157,7 @@
      (define on-keyword (one-of-the-symbols '(on)))
      (define input-keyword (one-of-the-symbols '(input)))
      (define union-keyword (one-of-the-symbols '(union)))
+     (define enum-keyword (one-of-the-symbols '(enum)))
      (define type-keyword (one-of-the-symbols '(type)))
      (define implements-keyword (one-of-the-symbols '(implements)))
      (define interface-keyword (one-of-the-symbols '(interface)))
@@ -201,6 +202,7 @@
      ((a <- interface-type-definition) a)
      ((a <- input-object-type-definition) a)
      ((a <- union-type-definition) a)
+     ((a <- enum-type-definition) a)
      ((a <- object-type-definition) a)
      ((a <- directive-definition) a))
 
@@ -239,6 +241,14 @@
                   directives <- directive-list*
                   types <- union-member-types?)
      `(union ,name ,description ,directives ,types)))
+
+   (enum-type-definition
+    ((description <- string-value?
+                  enum-keyword
+                  name <- 'name
+                  directives <- directive-list*
+                  values <- enum-values-definition?)
+     `(enum ,name ,description ,directives ,values)))
 
    (object-type-definition
     ((description <- string-value?
@@ -288,6 +298,24 @@
      (cons first rest))
     ((first <- 'name)
      (list first)))
+
+   (enum-values-definition?
+    (('|{| list <- enum-value-definition-list* '|}|) list)
+    (() '()))
+
+   (enum-value-definition-list*
+    ((first <- enum-value-definition rest <- enum-value-definition-list*)
+     (cons first rest))
+    (() '()))
+
+   (enum-value-definition
+    ((description <- string-value?
+                  value <- enum-value
+                  directives <- directive-list*)
+     `(value ,value ,description ,directives)))
+
+   (enum-value
+    ((name <- 'name) name)) ;; TODO: but not true or false or null
 
    (fields-definition?
     ((def <- fields-definition) def)
