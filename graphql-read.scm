@@ -194,7 +194,7 @@
 
    (definition-list*
      ((list <- definition-list+) list)
-     (() '()))
+     (('#f) '()))
    (definition-list+
      ((first <- definition rest <- definition-list*) (cons first rest)))
    (definition
