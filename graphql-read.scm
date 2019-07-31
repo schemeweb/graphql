@@ -118,8 +118,9 @@
           (read-string?)
           (read-number?)
           (read-name?)
-          (error (string-append "Syntax error: "
-                                (number->string (char->integer (peek-char))))))))
+          (error
+           (string-append "Syntax error: "
+                          (number->string (char->integer (peek-char))))))))
 
 (define (token-generator)
   (lambda ()
