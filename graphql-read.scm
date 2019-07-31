@@ -3,9 +3,22 @@
 
 ;;;; Lexer
 
-(define ascii-digit "0123456789")
-(define name-leader "_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
-(define name-subseq (string-append name-leader ascii-digit))
+(define (ascii-digit c)
+  (let ((cc (char->integer c)))
+    (<= #x30 cc #x39)))
+
+(define (name-leader c)
+  (let ((cc (char->integer c)))
+    (or (<= #x41 cc #x5a)  ; A..Z
+        (<= #x61 cc #x7a)  ; a..z
+        (= #x5f cc))))     ; _
+
+(define (name-subseq c)
+  (let ((cc (char->integer c)))
+    (or (<= #x41 cc #x5a)     ; A..Z
+        (<= #x61 cc #x7a)     ; a..z
+        (= #x5f cc)           ; _
+        (<= #x30 cc #x39))))  ; 0..9
 
 (define (graphql-string->symbol string)
   (string->symbol (string-map (lambda (ch) (if (char=? ch #\_) #\- ch))
