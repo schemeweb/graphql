@@ -145,56 +145,65 @@
 ;;;; Parser
 
 (define parse-graphql-document
-  (packrat-parser
 
-   (begin
+  (let ((eof
+         (one-of-the-symbols '(#f)))
+        (empty
+         (lambda (results) (make-result #f results)))
+        (operation-type
+         (one-of-the-symbols '(query mutation subscription)))
+        (fragment-keyword
+         (one-of-the-symbols '(fragment)))
+        (directive-keyword
+         (one-of-the-symbols '(directive)))
+        (on-keyword
+         (one-of-the-symbols '(on)))
+        (input-keyword
+         (one-of-the-symbols '(input)))
+        (union-keyword
+         (one-of-the-symbols '(union)))
+        (enum-keyword
+         (one-of-the-symbols '(enum)))
+        (scalar-keyword
+         (one-of-the-symbols '(scalar)))
+        (type-keyword
+         (one-of-the-symbols '(type)))
+        (implements-keyword
+         (one-of-the-symbols '(implements)))
+        (interface-keyword
+         (one-of-the-symbols '(interface)))
+        (executable-directive-location
+         (one-of-the-symbols
+          '(QUERY
+            MUTATION
+            SUBSCRIPTION
+            FIELD
+            FRAGMENT-DEFINITION
+            FRAGMENT-SPREAD
+            INLINE-FRAGMENT)))
+        (type-system-directive-location
+         (one-of-the-symbols
+          '(SCHEMA
+            SCALAR
+            OBJECT
+            FIELD-DEFINITION
+            ARGUMENT-DEFINITION
+            INTERFACE
+            UNION
+            ENUM
+            ENUM-VALUE
+            INPUT-OBJECT
+            INPUT-FIELD-DEFINITION))))
 
-     (define operation-type
-       (one-of-the-symbols '(query mutation subscription)))
-
-     (define fragment-keyword (one-of-the-symbols '(fragment)))
-     (define directive-keyword (one-of-the-symbols '(directive)))
-     (define on-keyword (one-of-the-symbols '(on)))
-     (define input-keyword (one-of-the-symbols '(input)))
-     (define union-keyword (one-of-the-symbols '(union)))
-     (define enum-keyword (one-of-the-symbols '(enum)))
-     (define scalar-keyword (one-of-the-symbols '(scalar)))
-     (define type-keyword (one-of-the-symbols '(type)))
-     (define implements-keyword (one-of-the-symbols '(implements)))
-     (define interface-keyword (one-of-the-symbols '(interface)))
-
-     (define executable-directive-location
-       (one-of-the-symbols
-        '(QUERY
-          MUTATION
-          SUBSCRIPTION
-          FIELD
-          FRAGMENT-DEFINITION
-          FRAGMENT-SPREAD
-          INLINE-FRAGMENT)))
-
-     (define type-system-directive-location
-       (one-of-the-symbols
-        '(SCHEMA
-          SCALAR
-          OBJECT
-          FIELD-DEFINITION
-          ARGUMENT-DEFINITION
-          INTERFACE
-          UNION
-          ENUM
-          ENUM-VALUE
-          INPUT-OBJECT
-          INPUT-FIELD-DEFINITION)))
-
-     document)
+    (packrat-parser
+     document
 
    (document
     ((list <- definition-list+) list))
 
    (definition-list*
      ((list <- definition-list+) list)
-     (('#f) '()))
+     ((eof) '()))
    (definition-list+
      ((first <- definition rest <- definition-list*) (cons first rest)))
    (definition
@@ -273,7 +282,7 @@
    (implements-interfaces?
     ((implements-keyword '|&| list <- implements-interfaces-list+) list)
     ((implements-keyword      list <- implements-interfaces-list+) list)
-    (() '()))
+    ((empty) '()))
 
    (implements-interfaces-list+
     ((first <- 'name rest <- implements-interfaces-list-cont)
@@ -281,7 +290,7 @@
 
    (implements-interfaces-list-cont
     (('|&| list <- implements-interfaces-list+) list)
-    (() '()))
+    ((empty) '()))
 
    (directive-locations
     (('|\|| list <- directive-location-list+) list)
@@ -300,7 +309,7 @@
    (union-member-types?
     (('|=| '|\|| list <- union-member-type-list+) list)
     (('|=| list <- union-member-type-list+) list)
-    (() '()))
+    ((empty) '()))
 
    (union-member-type-list+
     ((first <- 'name '|\|| rest <- union-member-type-list+)
@@ -310,12 +319,12 @@
 
    (enum-values-definition?
     (('|{| list <- enum-value-definition-list* '|}|) list)
-    (() '()))
+    ((empty) '()))
 
    (enum-value-definition-list*
     ((first <- enum-value-definition rest <- enum-value-definition-list*)
      (cons first rest))
-    (() '()))
+    ((empty) '()))
 
    (enum-value-definition
     ((description <- string-value?
@@ -328,7 +337,7 @@
 
    (fields-definition?
     ((def <- fields-definition) def)
-    (() #f))
+    ((empty) #f))
 
    (fields-definition
     (('|{| fields <- field-definition-list+ '|}|)
@@ -336,7 +345,7 @@
 
    (field-definition-list*
     ((list <- field-definition-list+) list)
-    (() '()))
+    ((empty) '()))
 
    (field-definition-list+
     ((first <- field-definition rest <- field-definition-list*)
@@ -353,7 +362,7 @@
 
    (arguments-definition?
     ((a <- arguments-definition) a)
-    (() #f))
+    ((empty) #f))
 
    (arguments-definition
     (('|(| list <- input-value-definition-list* '|)|)
@@ -361,11 +370,11 @@
 
    (input-fields-definition?
     (('|{| list <- input-value-definition-list+ '|}|) list)
-    (() '()))
+    ((empty) '()))
 
    (input-value-definition-list*
     ((list <- input-value-definition-list+) list)
-    (() '()))
+    ((empty) '()))
 
    (input-value-definition-list+
     ((first <- input-value-definition rest <- input-value-definition-list*)
@@ -387,14 +396,14 @@
 
    (default-value?
      (('|=| value <- value) `(default ,value))
-     (() #f))
+     ((empty) #f))
 
    (variable-definitions?
     (('|(| list <- variable-definition-list+ '|)|) list)
-    (() '()))
+    ((empty) '()))
    (variable-definition-list*
     ((list <- variable-definition-list+) list)
-    (() '()))
+    ((empty) '()))
    (variable-definition-list+
     ((first <- variable-definition rest <- variable-definition-list*)
      (cons first rest)))
@@ -406,7 +415,7 @@
     ((first <- directive rest <- directive-list*) (cons first rest)))
    (directive-list*
     ((list <- directive-list+) list)
-    (() '()))
+    ((empty) '()))
    (directive
     (('|@| name <- 'name arguments <- arguments?)
      `(@ ,name ,@arguments)))
@@ -453,7 +462,7 @@
 
    (type-condition?
     ((a <- type-condition) a)
-    (() #f))
+    ((empty) #f))
 
    (type-condition
     ((on-keyword name <- 'name)
@@ -465,14 +474,14 @@
 
    (selection-set?
     ((selection-set <- selection-set) selection-set)
-    (() '()))
+    ((empty) '()))
    (selection-set
     (('|{| list <- selection-list+ '|}|) list))
    (selection-list+
     ((first <- selection rest <- selection-list*) (cons first rest)))
    (selection-list*
     ((list <- selection-list+) list)
-    (() '()))
+    ((empty) '()))
    (selection
     ((a <- field) a)
     ;;fragment-spread
@@ -492,21 +501,21 @@
        (if alias `(alias ,alias ,x) x))))
    (alias?
     ((name <- 'name '|:|)  name)
-    (()                    #f))
+    ((empty) #f))
    (arguments?
     (('|(| args <- name-value-pair-list+ '|)|)  args)
-    (()                                         '()))
+    ((empty) '()))
    (name-value-pair-list+
     ((first <- name-value-pair rest <- name-value-pair-list*)
      (cons first rest)))
    (name-value-pair-list*
     ((list <- name-value-pair-list+)  list)
-    (()                               '()))
+    ((empty) '()))
    (name-value-pair
     ((name <- 'name  '|:|  value <- value)  (list name value)))
    (value?
     ((v <- value) v)
-    (() #f))
+    ((empty) #f))
    (value
     ((name <- variable-name) `($ ,name))
     ((v <- 'string) v)
@@ -521,10 +530,10 @@
     ((v <- object-value) v))
    (string-value?
     ((v <- 'string) v)
-    (() #f))
+    ((empty) #f))
    (value-list*
     ((first <- value rest <- value-list*) (cons first rest))
-    (()                                   '()))
+    ((empty) '()))
    (list-value
     (('|[| v <- value-list* '|]|) (list->vector v)))
    (object-value
@@ -534,7 +543,7 @@
 
    (name?
     ((name <- 'name) name)
-    (() #f))))
+    ((empty) #f)))))
 
 ;;;; API
 
